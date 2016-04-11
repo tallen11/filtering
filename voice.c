@@ -101,18 +101,14 @@ float cubicAmplifier(float input)
 	return output;
 }
 
-void lowPassFilter(float *input, int length, float *output, int passes)
+float processSample(int index, const float *input)
 {
-	for (int i = 0; i < length; ++i) {
-		output[i] = input[i];
-	}
+	int delay = 1;
+	float a = 5.0f;
+	int prevIndex = index - delay < 0 ? 0 : index - delay;
+	float output = input[index] + a * input[prevIndex];
 
-	for (int i = 0; i < passes; ++i) {
-		for (int i = 0; i < length; ++i) {
-			int nextIndex = i + 1 > length - 1 ? 0 : i + 1;
-			output[i] = (output[i] + output[nextIndex]) / 2.0;
-		}
-	}
+	return output;
 }
 
 static int callback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo,PaStreamCallbackFlags statusFlags, void *userData)
@@ -129,19 +125,13 @@ static int callback(const void *inputBuffer, void *outputBuffer, unsigned long f
 			*out++ = 0.0f;
 		}
 	} else {
-		float *filteredData = malloc(sizeof(float) * framesPerBuffer);
-		lowPassFilter(in, framesPerBuffer, filteredData, 1);
-		for (int i = 0; i < framesPerBuffer; ++i)
-		{
-			
-			printf("%f\n", filteredData[i]);
-		}
+		float previous = 0.0;
 		for (int i = 0; i < framesPerBuffer; ++i) {
-			// float tp = *in++;
-			*out++ = filteredData[i]; // tp;
-		}
+			// out[i] = (in[i] - previous * 0.75f);
+			// previous = out[i];
 
-		free(filteredData);
+			*out++ = cubicAmplifier(cubicAmplifier(cubicAmplifier(*in++)));
+		}
 
 		// fftw_complex *fftIn = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * framesPerBuffer);
 		// fftw_complex *fftOut = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * framesPerBuffer);
